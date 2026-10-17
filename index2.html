@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DairyHeat Lab — Prototype 1</title>
+    <style>
+        :root {
+            --bg-base: #0a192f;
+            --bg-panel: #112240;
+            --border-color: #233554;
+            --text-primary: #ccd6f6;
+            --text-secondary: #8892b0;
+            --accent: #64ffda;
+            --hot-stream: #ff4b4b;
+            --cold-stream: #00e5ff;
+            --danger: #ef4444;
+            --font-main: system-ui, -apple-system, sans-serif;
+            --font-mono: "Fira Code", "Consolas", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        #app-error {
+            display: none;
+            background: var(--danger);
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        header h1 { font-size: 2rem; letter-spacing: 1px; margin-bottom: 5px; }
+        header p { color: var(--accent); font-family: var(--font-mono); font-size: 0.9rem; }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .form-group input {
+            width: 100%;
+            background: var(--bg-base);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+        .form-group input:focus { outline: none; border-color: var(--accent); }
+
+        /* Buttons */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        button {
+            background: var(--bg-base);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        button:hover { background: var(--border-color); }
+        button.primary { background: var(--accent); color: var(--bg-base); }
+        button.primary:hover { background: #52e0c4; }
+        button.danger { border-color: var(--danger); color: var(--danger); }
+        button.danger:hover { background: rgba(239, 68, 68, 0.1); }
+
+        /* Schematic */
+        .main-view { display: flex; flex-direction: column; gap: 20px; }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            background: var(--bg-panel);
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+        .indicator {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #eab308;
+            box-shadow: 0 0 8px #eab308;
+        }
+        .indicator.running { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .indicator.stopped { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+        .svg-wrapper {
+            background: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: 350px;
+            position: relative;
+            overflow: hidden;
+        }
+        svg { width: 100%; height: 100%; }
+
+        canvas {
+            width: 100%;
+            height: 250px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        /* Tables & Data */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(35, 53, 84, 0.5);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+        .data-label { color: var(--text-secondary); font-family: var(--font-main); }
+        table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+        th, td { padding: 8px; text-align: right; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-secondary); font-family: var(--font-main); font-weight: normal; }
+        td:first-child, th:first-child { text-align: left; }
+        .text-hot { color: var(--hot-stream); }
+        .text-cold { color: var(--cold-stream); }
+        .err-text { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+        @media (max-width: 1024px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-error">Initialization Error: Check browser console.</div>
+
+    <header>
+        <h1>DairyHeat Lab</h1>
+        <p>Prototype 1 — Waste Heat Recovery Simulation</p>
+    </header>
+
+    <div class="dashboard">
+        <!-- Input Panel -->
+        <div class="panel">
+            <div class="panel-title">Operating Parameters</div>
+            <form id="sim-form">
+                <div class="form-group">
+                    <label>Hot Inlet Temp (°C) [Dairy Drain]</label>
+                    <input type="number" id="in_th_in" step="0.1" value="80.0">
+                </div>
+                <div class="form-group">
+                    <label>Cold Inlet Temp (°C) [Clean Water]</label>
+                    <input type="number" id="in_tc_in" step="0.1" value="15.0">
+                </div>
+                <div class="form-group">
+                    <label>Hot Mass Flow (kg/s) [Assumed]</label>
+                    <input type="number" id="in_mh" step="0.01" value="0.25">
+                </div>
+                <div class="form-group">
+                    <label>Cold Mass Flow (kg/s) [Assumed]</label>
+                    <input type="number" id="in_mc" step="0.01" value="0.25">
+                </div>
+                <div class="form-group">
+                    <label>Hot Specific Heat (J/kg·K) [Assumed]</label>
+                    <input type="number" id="in_cph" step="1" value="4180">
+                </div>
+                <div class="form-group">
+                    <label>Cold Specific Heat (J/kg·K) [Assumed]</label>
+                    <input type="number" id="in_cpc" step="1" value="4180">
+                </div>
+                <div class="form-group">
+                    <label>Overall Conductance UA (W/K) [Assumed]</label>
+                    <input type="number" id="in_ua" step="1" value="3135">
+                </div>
+                
+                <div id="val-err" class="err-text"></div>
+
+                <div class="btn-grid">
+                    <button type="button" class="primary" id="btn-apply">Apply Params</button>
+                    <button type="button" id="btn-default">Reset Default</button>
+                </div>
+            </form>
+
+            <div class="form-group" style="margin-top: 25px;">
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Animation Speed</span><span id="speed-disp">1.0x</span>
+                </label>
+                <input type="range" id="anim-speed" min="0.5" max="3.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="btn-grid">
+                <button type="button" id="btn-toggle">Start Simulation</button>
+                <button type="button" class="danger" id="btn-reset">Reset View</button>
+            </div>
+        </div>
+
+        <!-- Main View -->
+        <div class="main-view">
+            <div class="status-bar">
+                <div>
+                    <span id="stat-ind" class="indicator"></span>
+                    <span id="stat-text">SYSTEM READY</span>
+                </div>
+                <div>Sim Time: <span id="sim-time">0.0</span> s</div>
+            </div>
+
+            <div class="svg-wrapper" id="svg-container"></div>
+
+            <div class="panel">
+                <div class="panel-title">Illustrative Temperature Profile</div>
+                <canvas id="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Data Panels -->
+        <div class="data-grid">
+            <div class="panel">
+                <div class="panel-title">Live Performance</div>
+                <div class="data-row"><span class="data-label">Heat Duty (q):</span> <span id="out_q">-- kW</span></div>
+                <div class="data-row"><span class="data-label">Max Possible Heat (q_max):</span> <span id="out_qmax">-- kW</span></div>
+                <div class="data-row"><span class="data-label">Effectiveness (ε):</span> <span id="out_eff">--</span></div>
+                <div class="data-row"><span class="data-label">NTU:</span> <span id="out_ntu">--</span></div>
+                <div class="data-row"><span class="data-label">Capacity Ratio (C_r):</span> <span id="out_cr">--</span></div>
+                <div class="data-row"><span class="data-label">Energy Bal Residual:</span> <span id="out_res">-- W</span></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Stream Data</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stream</th>
+                            <th>T_in (°C)</th>
+                            <th>T_out (°C)</th>
+                            <th>C (W/K)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-hot">Hot (Drain)</td>
+                            <td id="tbl_thi">--</td>
+                            <td id="tbl_tho">--</td>
+                            <td id="tbl_ch">--</td>
+                        </tr>
+                        <tr>
+                            <td class="text-cold">Cold (Clean)</td>
+                            <td id="tbl_tci">--</td>
+                            <td id="tbl_tco">--</td>
+                            <td id="tbl_cc">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Engineering Notes & Validation</div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px;">
+                    <strong>Counterflow Model:</strong> Fluids enter at opposite ends. The cold fluid exit temperature can exceed the hot fluid exit temperature, maximizing energy recovery.
+                </p>
+                <div class="data-row" style="border-bottom: none;">
+                    <span class="data-label">Validation Status:</span> 
+                    <span id="val-badge" style="color: var(--accent);">PENDING</span>
+                </div>
+                <ul style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 10px; padding-left: 15px;">
+                    <li>Fluids are physically separated.</li>
+                    <li>UA is an assumed uniform constant.</li>
+                    <li>Ignores spatial fouling and 3D thermal gradients.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initApp();
+            } catch (error) {
+                const errDiv = document.getElementById('app-error');
+                errDiv.style.display = 'block';
+                errDiv.innerText = 'Initialization Error: ' + error.message;
+                console.error(error);
+            }
+        });
+
+        // --- Application State ---
+        const state = {
+            isRunning: false,
+            simTime: 0,
+            lastFrameTime: 0,
+            animId: null,
+            particles: { hot: [], cold: [], xfer: [] },
+            results: null
+        };
+
+        // --- Initialization ---
+        function initApp() {
+            buildSVG();
+            bindEvents();
+            runCalculations(); // Run reference case immediately
+        }
+
+        function bindEvents() {
+            document.getElementById('btn-apply').addEventListener('click', runCalculations);
+            document.getElementById('btn-default').addEventListener('click', () => {
+                document.getElementById('in_th_in').value = 80.0;
+                document.getElementById('in_tc_in').value = 15.0;
+                document.getElementById('in_mh').value = 0.25;
+                document.getElementById('in_mc').value = 0.25;
+                document.getElementById('in_cph').value = 4180;
+                document.getElementById('in_cpc').value = 4180;
+                document.getElementById('in_ua').value = 3135;
+                runCalculations();
+            });
+
+            const speedSlider = document.getElementById('anim-speed');
+            speedSlider.addEventListener('input', (e) => {
+                document.getElementById('speed-disp').innerText = parseFloat(e.target.value).toFixed(1) + 'x';
+            });
+
+            document.getElementById('btn-toggle').addEventListener('click', toggleSim);
+            document.getElementById('btn-reset').addEventListener('click', resetSim);
+
+            window.addEventListener('resize', () => {
+                if (state.results) drawChart(state.results);
+            });
+        }
+
+        // --- Physics Engine ---
+        function runCalculations() {
+            const errBox = document.getElementById('val-err');
+            errBox.style.display = 'none';
+
+            const th_in = parseFloat(document.getElementById('in_th_in').value);
+            const tc_in = parseFloat(document.getElementById('in_tc_in').value);
+            const mh = parseFloat(document.getElementById('in_mh').value);
+            const mc = parseFloat(document.getElementById('in_mc').value);
+            const cph = parseFloat(document.getElementById('in_cph').value);
+            const cpc = parseFloat(document.getElementById('in_cpc').value);
+            const ua = parseFloat(document.getElementById('in_ua').value);
+
+            // Validation
+            if ([th_in, tc_in, mh, mc, cph, cpc, ua].some(isNaN)) {
+                showError("All fields require valid numbers."); return;
+            }
+            if (mh <= 0 || mc <= 0 || cph <= 0 || cpc <= 0) {
+                showError("Flows and heat capacities must be positive."); return;
+            }
+            if (ua < 0) {
+                showError("UA cannot be negative."); return;
+            }
+            if (tc_in >= th_in) {
+                showError("Hot inlet must be greater than cold inlet."); return;
+            }
+
+            // Calculation
+            const C_h = mh * cph;
+            const C_c = mc * cpc;
+            const C_min = Math.min(C_h, C_c);
+            const C_max = Math.max(C_h, C_c);
+            const C_r = C_min / C_max;
+
+            let epsilon = 0;
+            let ntu = 0;
+
+            if (ua > 0) {
+                ntu = ua / C_min;
+                if (Math.abs(C_r - 1.0) < 1e-6) {
+                    epsilon = ntu / (1.0 + ntu);
+                } else {
+                    const expTerm = Math.exp(-ntu * (1.0 - C_r));
+                    epsilon = (1.0 - expTerm) / (1.0 - C_r * expTerm);
+                }
+            }
+
+            const q_max = C_min * (th_in - tc_in);
+            const q = epsilon * q_max;
+
+            const th_out = th_in - (q / C_h);
+            const tc_out = tc_in + (q / C_c);
+
+            const res_w = Math.abs((C_h * (th_in - th_out)) - (C_c * (tc_out - tc_in)));
+
+            state.results = {
+                th_in, tc_in, th_out, tc_out, C_h, C_c, C_min, C_max, C_r,
+                ua, ntu, epsilon, q_max, q, res_w
+            };
+
+            updateDashboard(state.results);
+        }
+
+        function showError(msg) {
+            const errBox = document.getElementById('val-err');
+            errBox.innerText = msg;
+            errBox.style.display = 'block';
+        }
+
+        function updateDashboard(res) {
+            document.getElementById('out_q').innerText = (res.q / 1000).toFixed(4) + ' kW';
+            document.getElementById('out_qmax').innerText = (res.q_max / 1000).toFixed(3) + ' kW';
+            document.getElementById('out_eff').innerText = res.epsilon.toFixed(4);
+            document.getElementById('out_ntu').innerText = res.ntu.toFixed(4);
+            document.getElementById('out_cr').innerText = res.C_r.toFixed(4);
+            document.getElementById('out_res').innerText = res.res_w.toExponential(2) + ' W';
+
+            document.getElementById('tbl_thi').innerText = res.th_in.toFixed(2);
+            document.getElementById('tbl_tho').innerText = res.th_out.toFixed(2);
+            document.getElementById('tbl_ch').innerText = res.C_h.toFixed(0);
+
+            document.getElementById('tbl_tci').innerText = res.tc_in.toFixed(2);
+            document.getElementById('tbl_tco').innerText = res.tc_out.toFixed(2);
+            document.getElementById('tbl_cc').innerText = res.C_c.toFixed(0);
+
+            const badge = document.getElementById('val-badge');
+            if (res.res_w < 1e-2) {
+                badge.innerText = "PASSED (< 0.01 W)";
+                badge.style.color = "var(--accent)";
+            } else {
+                badge.innerText = "FAILED BALANCE";
+                badge.style.color = "var(--danger)";
+            }
+
+            drawChart(res);
+        }
+
+        // --- Chart Engine ---
+        function drawChart(res) {
+            const canvas = document.getElementById('chart-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const w = rect.width;
+            const h = rect.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const padX = 50;
+            const padY = 30;
+            
+            const minT = Math.min(res.th_out, res.tc_in) - 5;
+            const maxT = Math.max(res.th_in, res.tc_out) + 5;
+            const range = maxT - minT || 1;
+
+            const getX = (normalized) => padX + normalized * (w - padX * 2);
+            const getY = (temp) => h - padY - ((temp - minT) / range) * (h - padY * 2);
+
+            // Grid
+            ctx.strokeStyle = '#233554';
+            ctx.lineWidth = 1;
+            for(let i=0; i<=4; i++) {
+                let y = getY(minT + (range/4)*i);
+                ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w-padX, y); ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = '#8892b0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padX, padY/2); ctx.lineTo(padX, h - padY);
+            ctx.lineTo(w - padX/2, h - padY);
+            ctx.stroke();
+
+            // Hot Stream (Left to Right)
+            ctx.strokeStyle = '#ff4b4b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(getX(0), getY(res.th_in));
+            ctx.lineTo(getX(1), getY(res.th_out));
+            ctx.stroke();
+
+            // Cold Stream (Right to Left: Counterflow)
+            // Rendered on chart as: x=0 is Cold Outlet, x=1 is Cold Inlet
+            ctx.strokeStyle = '#00e5ff';
+            ctx.beginPath();
+            ctx.moveTo(getX(0), getY(res.tc_out));
+            ctx.lineTo(getX(1), getY(res.tc_in));
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = '#ccd6f6';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(maxT.toFixed(0) + "°C", padX - 8, padY);
+            ctx.fillText(minT.toFixed(0) + "°C", padX - 8, h - padY);
+            
+            ctx.textAlign = 'center';
+            ctx.fillText("Hot In / Cold Out", getX(0), h - padY + 18);
+            ctx.fillText("Hot Out / Cold In", getX(1), h - padY + 18);
+        }
+
+        // --- SVG & Animation ---
+        function buildSVG() {
+            const wrapper = document.getElementById('svg-container');
+            wrapper.innerHTML = `
+                <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="gHot" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#ff4b4b" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#ea580c" stop-opacity="0.3"/>
+                        </linearGradient>
+                        <linearGradient id="gCold" x1="100%" y1="0%" x2="0%" y2="0%">
+                            <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.3"/>
+                        </linearGradient>
+                    </defs>
+                    
+                    <rect x="150" y="80" width="500" height="190" rx="6" fill="#112240" stroke="#475569" stroke-width="3"/>
+                    <line x1="150" y1="175" x2="650" y2="175" stroke="#94a3b8" stroke-width="6" stroke-dasharray="12 6"/>
+                    
+                    <rect x="150" y="80" width="500" height="95" rx="6" fill="url(#gHot)"/>
+                    <rect x="150" y="175" width="500" height="95" rx="6" fill="url(#gCold)"/>
+
+                    <path d="M 0 127 L 150 127" stroke="#ff4b4b" stroke-width="20" fill="none" opacity="0.8"/>
+                    <path d="M 650 127 L 800 127" stroke="#ea580c" stroke-width="20" fill="none" opacity="0.8"/>
+                    <path d="M 800 222 L 650 222" stroke="#00e5ff" stroke-width="20" fill="none" opacity="0.8"/>
+                    <path d="M 150 222 L 0 222" stroke="#3b82f6" stroke-width="20" fill="none" opacity="0.8"/>
+
+                    <text x="10" y="105" fill="#ff4b4b" font-family="monospace" font-size="14">Hot Inlet</text>
+                    <text x="700" y="105" fill="#ea580c" font-family="monospace" font-size="14">Hot Outlet</text>
+                    <text x="700" y="260" fill="#00e5ff" font-family="monospace" font-size="14">Cold Inlet</text>
+                    <text x="10" y="260" fill="#3b82f6" font-family="monospace" font-size="14">Cold Outlet</text>
+                    <text x="400" y="60" fill="#ccd6f6" font-family="sans-serif" font-size="16" text-anchor="middle">Counterflow Heat Exchanger Shell</text>
+
+                    <!-- Flow Direction Arrows -->
+                    <polygon points="60,117 80,127 60,137" fill="#fff"/>
+                    <polygon points="720,117 740,127 720,137" fill="#fff"/>
+                    <polygon points="740,212 720,222 740,232" fill="#fff"/>
+                    <polygon points="80,212 60,222 80,232" fill="#fff"/>
+
+                    <g id="anim-layer"></g>
+                </svg>
+            `;
+            initParticles();
+        }
+
+        function initParticles() {
+            const layer = document.getElementById('anim-layer');
+            layer.innerHTML = '';
+            state.particles = { hot: [], cold: [], xfer: [] };
+
+            for(let i=0; i<40; i++) {
+                let h = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                h.setAttribute("r", 3.5);
+                h.setAttribute("fill", "#fff");
+                layer.appendChild(h);
+                state.particles.hot.push({ el: h, x: Math.random() * 800, y: 90 + Math.random() * 70 });
+
+                let c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                c.setAttribute("r", 3.5);
+                c.setAttribute("fill", "#fff");
+                layer.appendChild(c);
+                state.particles.cold.push({ el: c, x: Math.random() * 800, y: 185 + Math.random() * 70 });
+            }
+
+            for(let i=0; i<8; i++) {
+                let r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                r.setAttribute("width", 2);
+                r.setAttribute("height", 15);
+                r.setAttribute("fill", "#64ffda");
+                layer.appendChild(r);
+                state.particles.xfer.push({ el: r, x: 200 + i * 55, yOffset: Math.random() });
+            }
+            positionParticles();
+        }
+
+        function positionParticles() {
+            state.particles.hot.forEach(p => { p.el.setAttribute("cx", p.x); p.el.setAttribute("cy", p.y); });
+            state.particles.cold.forEach(p => { p.el.setAttribute("cx", p.x); p.el.setAttribute("cy", p.y); });
+            state.particles.xfer.forEach(p => {
+                p.el.setAttribute("x", p.x);
+                p.el.setAttribute("y", 160 + (p.yOffset * 25));
+                p.el.setAttribute("opacity", 1 - p.yOffset);
+            });
+        }
+
+        function loop(timestamp) {
+            if (!state.isRunning) return;
+            if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+            
+            const delta = timestamp - state.lastFrameTime;
+            state.lastFrameTime = timestamp;
+            
+            const speed = parseFloat(document.getElementById('anim-speed').value);
+            state.simTime += (delta / 1000) * speed;
+            document.getElementById('sim-time').innerText = state.simTime.toFixed(1);
+
+            state.particles.hot.forEach(p => {
+                p.x += 120 * (delta / 1000) * speed;
+                if (p.x > 800) p.x = 0;
+            });
+            state.particles.cold.forEach(p => {
+                p.x -= 120 * (delta / 1000) * speed;
+                if (p.x < 0) p.x = 800;
+            });
+            state.particles.xfer.forEach(p => {
+                p.yOffset += 1.5 * (delta / 1000) * speed;
+                if (p.yOffset > 1) p.yOffset = 0;
+            });
+
+            positionParticles();
+            state.animId = requestAnimationFrame(loop);
+        }
+
+        function toggleSim() {
+            const btn = document.getElementById('btn-toggle');
+            const ind = document.getElementById('stat-ind');
+            const txt = document.getElementById('stat-text');
+
+            if (state.isRunning) {
+                state.isRunning = false;
+                cancelAnimationFrame(state.animId);
+                state.animId = null;
+                btn.innerText = "Resume Simulation";
+                ind.className = "indicator stopped";
+                txt.innerText = "SIMULATION PAUSED";
+            } else {
+                state.isRunning = true;
+                state.lastFrameTime = performance.now();
+                btn.innerText = "Pause Simulation";
+                ind.className = "indicator running";
+                txt.innerText = "SIMULATION RUNNING";
+                state.animId = requestAnimationFrame(loop);
+            }
+        }
+
+        function resetSim() {
+            state.isRunning = false;
+            if (state.animId) cancelAnimationFrame(state.animId);
+            state.animId = null;
+            state.simTime = 0;
+            document.getElementById('sim-time').innerText = "0.0";
+            
+            document.getElementById('btn-toggle').innerText = "Start Simulation";
+            document.getElementById('stat-ind').className = "indicator";
+            document.getElementById('stat-text').innerText = "SYSTEM READY";
+            
+            initParticles();
+        }
+    </script>
+</body>
+</html>
