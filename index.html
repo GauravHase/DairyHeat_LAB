@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DairyHeat Lab — Prototype 1</title>
+    <style>
+        :root {
+            --bg-color: #0a192f;
+            --panel-bg: #112240;
+            --panel-border: #233554;
+            --text-main: #ccd6f6;
+            --text-muted: #8892b0;
+            --hot-color: #ff4b4b;
+            --hot-glow: rgba(255, 75, 75, 0.4);
+            --cold-color: #00e5ff;
+            --cold-glow: rgba(0, 229, 255, 0.4);
+            --accent-color: #64ffda;
+            --btn-hover: #1d3354;
+            --danger: #ef4444;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: "Fira Code", "Consolas", monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-gap: 20px;
+            grid-template-columns: 350px 1fr;
+        }
+
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--panel-border);
+            margin-bottom: 10px;
+        }
+
+        header h1 { font-size: 2rem; color: var(--text-main); letter-spacing: 1px; }
+        header p { color: var(--accent-color); font-size: 1rem; font-family: var(--font-mono); }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .panel-header {
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Controls & Inputs */
+        .input-group { margin-bottom: 12px; }
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .input-group input {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: var(--bg-color);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { background: var(--btn-hover); }
+        button.primary { background: var(--accent-color); color: var(--bg-color); }
+        button.primary:hover { background: #52e0c4; }
+        button.danger { border-color: var(--danger); color: var(--danger); }
+        button.danger:hover { background: rgba(239, 68, 68, 0.1); }
+
+        .slider-group { margin-top: 20px; }
+        .slider-group label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); }
+        input[type="range"] { width: 100%; margin-top: 8px; cursor: pointer; }
+
+        /* Schematic */
+        .schematic-container {
+            grid-column: 2 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .svg-container {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            min-height: 350px;
+        }
+        svg { width: 100%; height: 100%; display: block; }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-color);
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: 1px solid var(--panel-border);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #eab308;
+            box-shadow: 0 0 8px #eab308;
+        }
+        .status-running { background: var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
+        .status-stopped { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+        /* Info Panels */
+        .info-grid {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(35, 53, 84, 0.5);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+        .data-row:last-child { border-bottom: none; }
+        .data-label { color: var(--text-muted); font-family: var(--font-main); }
+        
+        table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+        th, td { padding: 8px; text-align: right; border-bottom: 1px solid var(--panel-border); }
+        th { color: var(--text-muted); font-family: var(--font-main); font-weight: normal; }
+        td:first-child, th:first-child { text-align: left; }
+        .hot-text { color: var(--hot-color); }
+        .cold-text { color: var(--cold-color); }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: none;
+        }
+
+        canvas {
+            width: 100%;
+            height: 250px;
+            background: var(--bg-color);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .footer {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--panel-border);
+            margin-top: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .schematic-container { grid-column: 1 / -1; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>DairyHeat Lab</h1>
+        <p>Virtual Thermal Engineering Laboratory — Prototype 1</p>
+    </header>
+
+    <div class="dashboard">
+        
+        <!-- Controls Panel -->
+        <div class="panel">
+            <div class="panel-header">Engineering Parameters</div>
+            <form id="paramForm">
+                <div class="input-group">
+                    <label>Hot Inlet Temp (°C) [Dairy Drain]</label>
+                    <input type="number" id="t_h_in" step="0.1" value="80.0" required>
+                </div>
+                <div class="input-group">
+                    <label>Cold Inlet Temp (°C) [Clean Water]</label>
+                    <input type="number" id="t_c_in" step="0.1" value="15.0" required>
+                </div>
+                <div class="input-group">
+                    <label>Hot Mass Flow (kg/s) [Assumed]</label>
+                    <input type="number" id="m_dot_h" step="0.01" value="0.25" required>
+                </div>
+                <div class="input-group">
+                    <label>Cold Mass Flow (kg/s) [Assumed]</label>
+                    <input type="number" id="m_dot_c" step="0.01" value="0.25" required>
+                </div>
+                <div class="input-group">
+                    <label>Hot Specific Heat (J/kg·K) [Assumed]</label>
+                    <input type="number" id="cp_h" step="1" value="4180" required>
+                </div>
+                <div class="input-group">
+                    <label>Cold Specific Heat (J/kg·K) [Assumed]</label>
+                    <input type="number" id="cp_c" step="1" value="4180" required>
+                </div>
+                <div class="input-group">
+                    <label>Overall Conductance UA (W/K) [Assumed]</label>
+                    <input type="number" id="ua" step="1" value="3135" required>
+                </div>
+                
+                <div id="errorBox" class="error-msg">Invalid inputs detected.</div>
+
+                <div class="btn-group">
+                    <button type="button" class="primary" onclick="applyParameters()">Apply Params</button>
+                    <button type="button" onclick="resetDefaults()">Reset Default</button>
+                </div>
+            </form>
+
+            <div class="slider-group">
+                <label><span>Animation Speed</span> <span id="speedVal">1.0x</span></label>
+                <input type="range" id="animSpeed" min="0.5" max="3.0" step="0.1" value="1.0" oninput="updateSpeed()">
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" id="btnStart" onclick="toggleSimulation()">Start Simulation</button>
+                <button type="button" class="danger" onclick="resetSimulation()">Reset View</button>
+            </div>
+        </div>
+
+        <!-- Schematic & Live Chart -->
+        <div class="schematic-container">
+            <div class="status-bar">
+                <div>
+                    <span id="statusDot" class="status-indicator"></span>
+                    <span id="statusText">SYSTEM READY</span>
+                </div>
+                <div>Sim Time: <span id="simTime">0.0</span> s</div>
+            </div>
+
+            <div class="svg-container" id="svgWrapper">
+                <!-- SVG injected by JS to maintain clean scaling -->
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">Temperature Profile Approximation</div>
+                <canvas id="tempChart"></canvas>
+                <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">
+                    *Illustrative spatial temperature profile based on effectiveness-NTU terminal states.
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Panels -->
+        <div class="info-grid">
+            <div class="panel">
+                <div class="panel-header">Live Performance</div>
+                <div class="data-row"><span class="data-label">Heat Duty (q):</span> <span id="out_q">-- kW</span></div>
+                <div class="data-row"><span class="data-label">Max Heat (q_max):</span> <span id="out_qmax">-- kW</span></div>
+                <div class="data-row"><span class="data-label">Effectiveness (ε):</span> <span id="out_eff">--</span></div>
+                <div class="data-row"><span class="data-label">NTU:</span> <span id="out_ntu">--</span></div>
+                <div class="data-row"><span class="data-label">Cap Rate Ratio (C_r):</span> <span id="out_cr">--</span></div>
+                <div class="data-row"><span class="data-label">Energy Residual:</span> <span id="out_res">-- W</span></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">Stream Data</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stream</th>
+                            <th>T_in (°C)</th>
+                            <th>T_out (°C)</th>
+                            <th>Flow (kg/s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="hot-text">Hot (Drain)</td>
+                            <td id="tbl_h_in">--</td>
+                            <td id="tbl_h_out">--</td>
+                            <td id="tbl_h_flow">--</td>
+                        </tr>
+                        <tr>
+                            <td class="cold-text">Cold (Clean)</td>
+                            <td id="tbl_c_in">--</td>
+                            <td id="tbl_c_out">--</td>
+                            <td id="tbl_c_flow">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">System Operation</div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
+                    <strong>Counterflow Heat Exchange:</strong> Fluids flow in opposite directions, allowing the cold stream outlet temperature to potentially exceed the hot stream outlet temperature, maximizing thermal recovery.
+                </p>
+                <div class="data-row"><span class="data-label">Validation Status:</span> <span id="val_status" style="color: var(--accent-color);">PENDING</span></div>
+                <div class="data-row"><span class="data-label">Flow Regime:</span> <span>Counterflow</span></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">Engineering Notes</div>
+                <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 20px;">
+                    <li>Fluids remain physically separated by the exchanger wall.</li>
+                    <li><strong>UA (Conductance):</strong> Determines sizing and heat transfer capability. Assumed value in this prototype.</li>
+                    <li><strong>Assumptions:</strong> Constant properties, zero heat loss to surroundings, steady-state calculations.</li>
+                    <li>Does not model fouling dynamics, pressure drops, or 3D thermal fields.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            DairyHeat Lab Prototype 1 | Educational Simulation Module | Not connected to live plant sensors.
+        </div>
+    </div>
+
+    <script>
+        // --- Physics Engine ---
+        let currentResults = null;
+
+        function calculateHeatTransfer() {
+            const m_h = parseFloat(document.getElementById('m_h').value);
+            const m_c = parseFloat(document.getElementById('m_c').value);
+            const cp_h = parseFloat(document.getElementById('cp_h').value);
+            const cp_c = parseFloat(document.getElementById('cp_c').value);
+            const t_h_in = parseFloat(document.getElementById('t_h_in').value);
+            const t_c_in = parseFloat(document.getElementById('t_c_in').value);
+            const ua = parseFloat(document.getElementById('ua').value);
+
+            const errBox = document.getElementById('errorBox');
+            
+            // Validation
+            if ([m_h, m_c, cp_h, cp_c, t_h_in, t_c_in, ua].some(isNaN)) {
+                errBox.innerText = "All inputs must be valid numbers.";
+                errBox.style.display = "block"; return null;
+            }
+            if (m_h <= 0 || m_c <= 0 || cp_h <= 0 || cp_c <= 0) {
+                errBox.innerText = "Flow rates and specific heats must be > 0.";
+                errBox.style.display = "block"; return null;
+            }
+            if (ua < 0) {
+                errBox.innerText = "UA cannot be negative.";
+                errBox.style.display = "block"; return null;
+            }
+            if (t_c_in >= t_h_in) {
+                errBox.innerText = "Hot inlet must be greater than cold inlet.";
+                errBox.style.display = "block"; return null;
+            }
+
+            errBox.style.display = "none";
+
+            // Effectiveness-NTU Calculation
+            const C_h = m_h * cp_h;
+            const C_c = m_c * cp_c;
+            const C_min = Math.min(C_h, C_c);
+            const C_max = Math.max(C_h, C_c);
+            const C_r = C_min / C_max;
+
+            let epsilon = 0;
+            let ntu = 0;
+
+            if (ua > 0) {
+                ntu = ua / C_min;
+                if (Math.abs(C_r - 1.0) < 1e-6) {
+                    epsilon = ntu / (1.0 + ntu);
+                } else {
+                    const expTerm = Math.exp(-ntu * (1.0 - C_r));
+                    epsilon = (1.0 - expTerm) / (1.0 - C_r * expTerm);
+                }
+            }
+
+            const q_max = C_min * (t_h_in - t_c_in);
+            const q = epsilon * q_max;
+
+            const t_h_out = t_h_in - (q / C_h);
+            const t_c_out = t_c_in + (q / C_c);
+
+            const q_hot_side = C_h * (t_h_in - t_h_out);
+            const q_cold_side = C_c * (t_c_out - t_c_in);
+            const residual = Math.abs(q_hot_side - q_cold_side);
+
+            return {
+                q_kw: q / 1000,
+                q_max_kw: q_max / 1000,
+                epsilon: epsilon,
+                ntu: ntu,
+                c_r: C_r,
+                t_h_out: t_h_out,
+                t_c_out: t_c_out,
+                t_h_in: t_h_in,
+                t_c_in: t_c_in,
+                m_h: m_h,
+                m_c: m_c,
+                residual: residual
+            };
+        }
+
+        function updateDashboard(res) {
+            if(!res) return;
+            
+            document.getElementById('out_q').innerText = res.q_kw.toFixed(3) + ' kW';
+            document.getElementById('out_qmax').innerText = res.q_max_kw.toFixed(3) + ' kW';
+            document.getElementById('out_eff').innerText = res.epsilon.toFixed(4);
+            document.getElementById('out_ntu').innerText = res.ntu.toFixed(4);
+            document.getElementById('out_cr').innerText = res.c_r.toFixed(4);
+            document.getElementById('out_res').innerText = res.residual.toExponential(2) + ' W';
+
+            document.getElementById('tbl_h_in').innerText = res.t_h_in.toFixed(2);
+            document.getElementById('tbl_h_out').innerText = res.t_h_out.toFixed(2);
+            document.getElementById('tbl_h_flow').innerText = res.m_h.toFixed(2);
+
+            document.getElementById('tbl_c_in').innerText = res.t_c_in.toFixed(2);
+            document.getElementById('tbl_c_out').innerText = res.t_c_out.toFixed(2);
+            document.getElementById('tbl_c_flow').innerText = res.m_c.toFixed(2);
+
+            const valStatus = document.getElementById('val_status');
+            if(res.residual < 1e-3) {
+                valStatus.innerText = "PASSED (< 1e-3 W)";
+                valStatus.style.color = "var(--accent-color)";
+            } else {
+                valStatus.innerText = "FAILED BAL";
+                valStatus.style.color = "var(--danger)";
+            }
+
+            drawChart(res);
+        }
+
+        // --- Chart Engine ---
+        function drawChart(res) {
+            const canvas = document.getElementById('tempChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Handle DPI scaling
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const w = rect.width;
+            const h = rect.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const padX = 45;
+            const padY = 30;
+            const maxT = Math.max(res.t_h_in, res.t_c_out) + 5;
+            const minT = Math.min(res.t_h_out, res.t_c_in) - 5;
+            const range = maxT - minT || 1;
+
+            const getX = (normalized) => padX + normalized * (w - padX * 2);
+            const getY = (temp) => h - padY - ((temp - minT) / range) * (h - padY * 2);
+
+            // Grid lines
+            ctx.strokeStyle = '#233554';
+            ctx.lineWidth = 1;
+            for(let i=0; i<=4; i++) {
+                let y = getY(minT + (range/4)*i);
+                ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w-padX, y); ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = '#8892b0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padX, padY/2); ctx.lineTo(padX, h - padY); // Y
+            ctx.lineTo(w - padX/2, h - padY); // X
+            ctx.stroke();
+
+            // Hot Line (0 to 1)
+            ctx.strokeStyle = '#ff4b4b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(getX(0), getY(res.t_h_in));
+            ctx.lineTo(getX(1), getY(res.t_h_out));
+            ctx.stroke();
+
+            // Cold Line (Counterflow: 1 to 0) -> Plotted left to right is Tc_out to Tc_in
+            ctx.strokeStyle = '#00e5ff';
+            ctx.beginPath();
+            ctx.moveTo(getX(0), getY(res.t_c_out));
+            ctx.lineTo(getX(1), getY(res.t_c_in));
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = '#ccd6f6';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(maxT.toFixed(0) + "°", padX - 8, padY);
+            ctx.fillText(minT.toFixed(0) + "°", padX - 8, h - padY);
+            
+            ctx.textAlign = 'center';
+            ctx.fillText("Hot Inlet", getX(0), h - padY + 15);
+            ctx.fillText("Cold Inlet", getX(1), h - padY + 15);
+        }
+
+        // --- SVG Schematic & Animation Engine ---
+        const svgHTML = `
+            <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="hotGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ff4b4b" stop-opacity="0.8"/>
+                        <stop offset="100%" stop-color="#ea580c" stop-opacity="0.8"/>
+                    </linearGradient>
+                    <linearGradient id="coldGrad" x1="100%" y1="0%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.8"/>
+                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.8"/>
+                    </linearGradient>
+                </defs>
+                
+                <!-- Background Shell -->
+                <rect x="150" y="80" width="500" height="190" rx="10" fill="#112240" stroke="#475569" stroke-width="4"/>
+                
+                <!-- Separation Wall -->
+                <line x1="150" y1="175" x2="650" y2="175" stroke="#94a3b8" stroke-width="6" stroke-dasharray="10 5"/>
+                
+                <!-- Flow Channels -->
+                <rect x="150" y="80" width="500" height="95" rx="10" fill="url(#hotGrad)" opacity="0.15"/>
+                <rect x="150" y="175" width="500" height="95" rx="10" fill="url(#coldGrad)" opacity="0.15"/>
+
+                <!-- Pipes -->
+                <path d="M 0 127 L 150 127" stroke="#ff4b4b" stroke-width="20" fill="none" opacity="0.6"/>
+                <path d="M 650 127 L 800 127" stroke="#ea580c" stroke-width="20" fill="none" opacity="0.6"/>
+                <path d="M 800 222 L 650 222" stroke="#00e5ff" stroke-width="20" fill="none" opacity="0.6"/>
+                <path d="M 150 222 L 0 222" stroke="#3b82f6" stroke-width="20" fill="none" opacity="0.6"/>
+
+                <!-- Labels -->
+                <text x="10" y="105" fill="#ff4b4b" font-family="monospace" font-size="14">Hot Inlet (Th,in)</text>
+                <text x="680" y="105" fill="#ea580c" font-family="monospace" font-size="14">Hot Outlet</text>
+                <text x="680" y="260" fill="#00e5ff" font-family="monospace" font-size="14">Cold Inlet (Tc,in)</text>
+                <text x="10" y="260" fill="#3b82f6" font-family="monospace" font-size="14">Cold Outlet</text>
+                <text x="400" y="70" fill="#ccd6f6" font-family="sans-serif" font-size="16" text-anchor="middle">Counterflow Heat Exchanger Shell</text>
+
+                <!-- Arrows -->
+                <polygon points="60,117 80,127 60,137" fill="#fff"/>
+                <polygon points="720,117 740,127 720,137" fill="#fff"/>
+                <polygon points="740,212 720,222 740,232" fill="#fff"/>
+                <polygon points="80,212 60,222 80,232" fill="#fff"/>
+
+                <!-- Dynamic Particles Container -->
+                <g id="particlesGroup"></g>
+            </svg>
+        `;
+
+        document.getElementById('svgWrapper').innerHTML = svgHTML;
+
+        const pGroup = document.getElementById('particlesGroup');
+        let particles = [];
+        let transferArrows = [];
+        let animId;
+        let isRunning = false;
+        let simTime = 0;
+        let lastTimestamp = 0;
+
+        function initParticles() {
+            pGroup.innerHTML = '';
+            particles = [];
+            transferArrows = [];
+
+            // Hot particles (Left to Right)
+            for(let i=0; i<30; i++) {
+                let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("r", 4);
+                circle.setAttribute("fill", "#ff4b4b");
+                pGroup.appendChild(circle);
+                particles.push({ el: circle, type: 'hot', x: Math.random() * 800, y: 100 + Math.random()*50 });
+            }
+
+            // Cold particles (Right to Left)
+            for(let i=0; i<30; i++) {
+                let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("r", 4);
+                circle.setAttribute("fill", "#00e5ff");
+                pGroup.appendChild(circle);
+                particles.push({ el: circle, type: 'cold', x: Math.random() * 800, y: 195 + Math.random()*50 });
+            }
+
+            // Heat transfer visualizers (Top to Bottom)
+            for(let i=0; i<8; i++) {
+                let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("width", 3);
+                rect.setAttribute("height", 15);
+                rect.setAttribute("fill", "#64ffda");
+                pGroup.appendChild(rect);
+                transferArrows.push({ el: rect, x: 200 + i*60, yOffset: Math.random() });
+            }
+        }
+
+        function updateAnimation(timestamp) {
+            if (!isRunning) return;
+            
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            const speedMult = parseFloat(document.getElementById('animSpeed').value);
+            simTime += (delta / 1000) * speedMult;
+            document.getElementById('simTime').innerText = simTime.toFixed(1);
+
+            // Update DOM SVG elements
+            particles.forEach(p => {
+                if (p.type === 'hot') {
+                    p.x += 100 * (delta / 1000) * speedMult;
+                    if (p.x > 800) p.x = 0;
+                } else {
+                    p.x -= 100 * (delta / 1000) * speedMult;
+                    if (p.x < 0) p.x = 800;
+                }
+                p.el.setAttribute("cx", p.x);
+                p.el.setAttribute("cy", p.y);
+            });
+
+            transferArrows.forEach(a => {
+                a.yOffset += 1.5 * (delta / 1000) * speedMult;
+                if(a.yOffset > 1) a.yOffset = 0;
+                // Move from y=160 to y=185
+                const currentY = 160 + (a.yOffset * 25);
+                a.el.setAttribute("x", a.x);
+                a.el.setAttribute("y", currentY);
+                a.el.setAttribute("opacity", 1 - a.yOffset);
+            });
+
+            animId = requestAnimationFrame(updateAnimation);
+        }
+
+        // --- Controls ---
+        function applyParameters() {
+            currentResults = calculateHeatTransfer();
+            if(currentResults) updateDashboard(currentResults);
+        }
+
+        function resetDefaults() {
+            document.getElementById('t_h_in').value = 80.0;
+            document.getElementById('t_c_in').value = 15.0;
+            document.getElementById('m_dot_h').value = 0.25;
+            document.getElementById('m_dot_c').value = 0.25;
+            document.getElementById('cp_h').value = 4180;
+            document.getElementById('cp_c').value = 4180;
+            document.getElementById('ua').value = 3135;
+            applyParameters();
+        }
+
+        function updateSpeed() {
+            document.getElementById('speedVal').innerText = document.getElementById('animSpeed').value + 'x';
+        }
+
+        function setStatus(state) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const btn = document.getElementById('btnStart');
+
+            dot.className = 'status-indicator';
+            if(state === 'RUNNING') {
+                dot.classList.add('status-running');
+                text.innerText = 'SIMULATION RUNNING';
+                btn.innerText = 'Pause Simulation';
+            } else if (state === 'PAUSED') {
+                dot.classList.add('status-stopped');
+                text.innerText = 'SIMULATION PAUSED';
+                btn.innerText = 'Resume Simulation';
+            } else {
+                text.innerText = 'SYSTEM READY';
+                btn.innerText = 'Start Simulation';
+            }
+        }
+
+        function toggleSimulation() {
+            if (isRunning) {
+                isRunning = false;
+                setStatus('PAUSED');
+            } else {
+                isRunning = true;
+                lastTimestamp = performance.now();
+                setStatus('RUNNING');
+                animId = requestAnimationFrame(updateAnimation);
+            }
+        }
+
+        function resetSimulation() {
+            isRunning = false;
+            cancelAnimationFrame(animId);
+            simTime = 0;
+            document.getElementById('simTime').innerText = "0.0";
+            setStatus('READY');
+            initParticles();
+        }
+
+        // Initialization
+        window.onload = () => {
+            initParticles();
+            applyParameters();
+            
+            // Handle window resize for canvas redraw
+            window.addEventListener('resize', () => {
+                if(currentResults) drawChart(currentResults);
+            });
+        };
+    </script>
+</body>
+</html>
